@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/app-icon.png?v=20260612-atom" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/app-icon.png?v=20260612-atom" />
+    <title>Вход | WireGuard Router Control</title>
+    <script>
+      (() => {
+        const theme = localStorage.getItem("wr-control-theme");
+        if (theme) document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <link rel="stylesheet" href="/styles.css?v=20260609-theme" />
+  </head>
+  <body class="login-page">
+    <canvas id="mesh" aria-hidden="true"></canvas>
+    <main class="login-shell">
+      <form class="login-card" method="post" action="/login">
+        <div class="login-brand">
+          <img class="brand-mark large" src="/app-icon.png?v=20260612-atom" alt="" aria-hidden="true" />
+          <strong>SlinkCore<span>WG</span></strong>
+        </div>
+        <p class="login-subtitle">Панель роутеров и WireGuard-доступа</p>
+        <label>
+          Имя пользователя
+          <input name="username" autocomplete="username" autofocus required />
+        </label>
+        <label>
+          Пароль
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <p id="loginError" class="login-error" hidden>Неверный логин или пароль.</p>
+        <button class="login-submit" type="submit">Войти</button>
+      </form>
+    </main>
+    <script>
+      const error = new URLSearchParams(location.search).get("error");
+      document.getElementById("loginError").hidden = !error;
+
+      const canvas = document.getElementById("mesh");
+      const ctx = canvas.getContext("2d");
+      let points = [];
+
+      function resize() {
+        canvas.width = innerWidth * devicePixelRatio;
+        canvas.height = innerHeight * devicePixelRatio;
+        canvas.style.width = innerWidth + "px";
+        canvas.style.height = innerHeight + "px";
+        ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        const count = Math.max(46, Math.floor((innerWidth * innerHeight) / 32000));
+        points = Array.from({ length: count }, () => ({
+          x: Math.random() * innerWidth,
+          y: Math.random() * innerHeight,
+          vx: (Math.random() - 0.5) * 0.22,
+          vy: (Math.random() - 0.5) * 0.22,
+        }));
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        ctx.fillStyle = "rgba(44, 121, 210, .5)";
+        ctx.strokeStyle = "rgba(44, 121, 210, .16)";
+        points.forEach((p, index) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < -20) p.x = innerWidth + 20;
+          if (p.x > innerWidth + 20) p.x = -20;
+          if (p.y < -20) p.y = innerHeight + 20;
+          if (p.y > innerHeight + 20) p.y = -20;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+          for (let i = index + 1; i < points.length; i += 1) {
+            const other = points[i];
+            const dx = p.x - other.x;
+            const dy = p.y - other.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 125) {
+              ctx.globalAlpha = 1 - dist / 125;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(other.x, other.y);
+              ctx.stroke();
+              ctx.globalAlpha = 1;
+            }
+          }
+        });
+        requestAnimationFrame(draw);
+      }
+
+      addEventListener("resize", resize);
+      resize();
+      draw();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "serverName": "wg-hub",
+    "serverEndpoint": "wg.example.com",
+    "serverPort": 51820,
+    "serverPublicKey": "CHANGE_ME_PUBLIC_KEY",
+    "wgCidr": "10.10.10.0/24",
+    "dns": "1.1.1.1"
+  },
+  "routers": [],
+  "clients": []
+}

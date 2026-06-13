@@ -1,0 +1,51 @@
+services:
+  router-wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wr-control-wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/Moscow
+    volumes:
+      - ./router-wireguard:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+
+  router-panel:
+    build: ./router-panel
+    container_name: wr-control-router-panel
+    env_file:
+      - ./.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8787
+      - ROUTER_WG_CONF=/app/router-wg/wg0.conf
+      - DOCKER_SOCKET=/var/run/docker.sock
+      - WG_CONTAINER=wr-control-wireguard
+    volumes:
+      - ./router-panel/data:/app/data
+      - ./router-wireguard/wg_confs:/app/router-wg
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    container_name: wr-control-caddy
+    depends_on:
+      - router-wireguard
+      - router-panel
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    restart: unless-stopped

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/app-icon.png?v=20260612-atom" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/app-icon.png?v=20260612-atom" />
+    <title>WireGuard Router Control</title>
+    <script>
+      (() => {
+        const theme = localStorage.getItem("wr-control-theme");
+        if (theme) document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <link rel="stylesheet" href="/styles.css?v=20260610-lan" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-mark" src="/app-icon.png?v=20260612-atom" alt="" aria-hidden="true" />
+        <div>
+          <h1>WireGuard Router Control</h1>
+          <p>Роутеры OpenWrt, WireGuard-конфиги и VPS peers.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Переключить тему" title="Переключить тему">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 1.5v3M12 19.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M1.5 12h3M19.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1" />
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 1 0 9.8 9.8z" />
+          </svg>
+        </button>
+        <button id="addRouter">Добавить роутер</button>
+        <button id="exportPeers">VPS peers</button>
+        <form class="logout-form" method="post" action="/logout">
+          <button class="ghost-button" type="submit">Выйти</button>
+        </form>
+      </div>
+    </header>
+
+    <main>
+      <section class="settings">
+        <h2>VPS</h2>
+        <div class="grid">
+          <label>Endpoint <input id="serverEndpoint" /></label>
+          <label>Port <input id="serverPort" type="number" /></label>
+          <label>WG-сеть <input id="wgCidr" /></label>
+          <label>Public key <input id="serverPublicKey" /></label>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside>
+          <div class="list-head">
+            <h2>Роутеры</h2>
+            <input id="filter" placeholder="Поиск" />
+          </div>
+          <div id="routerList" class="router-list"></div>
+        </aside>
+
+        <section class="details">
+          <div id="empty" class="empty">Выбери роутер или создай новый.</div>
+          <div id="editor" class="hidden">
+            <div class="editor-head">
+              <div>
+                <h2 id="editorTitle"></h2>
+                <p id="editorSubtitle"></p>
+              </div>
+              <button id="deleteRouter" class="danger">Удалить</button>
+            </div>
+
+            <div class="grid">
+              <label>Название <input id="name" /></label>
+              <label>Объект/адрес <input id="site" /></label>
+              <label>WG IP <input id="wgIp" /></label>
+              <label>LAN IP <input id="lanIp" /></label>
+              <label>LAN сеть <input id="lanCidr" /></label>
+              <label class="check-field">
+                <input id="allowLan" type="checkbox" />
+                <span>
+                  Маршрутизировать LAN через VPN
+                  <small>Добавляет LAN-сеть в VPS peer и OpenWrt forwarding wg → lan.</small>
+                </span>
+              </label>
+              <label>Модель <input id="model" /></label>
+              <label>Заметки <textarea id="notes" rows="3"></textarea></label>
+            </div>
+
+            <div class="button-row">
+              <button id="saveRouter">Сохранить</button>
+              <button id="applyVps">Применить на VPS</button>
+              <button id="copyOpenwrt">Копировать OpenWrt</button>
+              <button id="copyPeer">Копировать VPS peer</button>
+            </div>
+            <p id="applyStatus" class="status-line"></p>
+
+            <div class="outputs">
+              <div>
+                <h3>OpenWrt paste script</h3>
+                <textarea id="openwrtOutput" readonly rows="18"></textarea>
+              </div>
+              <div>
+                <h3>VPS peer block</h3>
+                <textarea id="peerOutput" readonly rows="9"></textarea>
+                <h3>Ключи</h3>
+                <textarea id="keysOutput" readonly rows="6"></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="clients-panel">
+        <div class="clients-head">
+          <h2>Устройства доступа</h2>
+          <button id="addClient">Добавить устройство</button>
+        </div>
+        <div class="clients-layout">
+          <aside>
+            <div class="list-head">
+              <input id="clientFilter" placeholder="Поиск" />
+            </div>
+            <div id="clientList" class="router-list"></div>
+          </aside>
+
+          <section class="details">
+            <div id="clientEmpty" class="empty">Выбери устройство или создай новое.</div>
+            <div id="clientEditor" class="hidden">
+              <div class="editor-head">
+                <div>
+                  <h2 id="clientTitle"></h2>
+                  <p id="clientSubtitle"></p>
+                </div>
+                <button id="deleteClient" class="danger">Удалить</button>
+              </div>
+
+              <div class="grid">
+                <label>Название <input id="clientName" /></label>
+                <label>Тип
+                  <select id="clientType">
+                    <option value="phone">Телефон</option>
+                    <option value="laptop">Ноутбук</option>
+                    <option value="pc">ПК</option>
+                    <option value="tablet">Планшет</option>
+                    <option value="other">Другое</option>
+                  </select>
+                </label>
+                <label>WG IP <input id="clientWgIp" /></label>
+                <label class="check-field">
+                  <input id="clientAllowLan" type="checkbox" />
+                  <span>
+                    Доступ к LAN роутеров
+                    <small>Добавляет LAN-сети всех роутеров в AllowedIPs клиента.</small>
+                  </span>
+                </label>
+                <label>Заметки <textarea id="clientNotes" rows="3"></textarea></label>
+              </div>
+
+              <div class="button-row">
+                <button id="saveClient">Сохранить</button>
+                <button id="applyClientVps">Применить на VPS</button>
+                <button id="copyClientConfig">Копировать конфиг</button>
+                <button id="copyClientQrLink">Копировать QR-ссылку</button>
+              </div>
+              <p id="clientStatus" class="status-line"></p>
+
+              <div class="outputs">
+                <div>
+                  <h3>WireGuard config</h3>
+                  <textarea id="clientConfig" readonly rows="18"></textarea>
+                </div>
+                <div>
+                  <h3>QR-код</h3>
+                  <img id="clientQr" class="client-qr" alt="QR код конфигурации" />
+                  <h3>Ключи</h3>
+                  <textarea id="clientKeys" readonly rows="6"></textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="peerDialog">
+      <h2>Все peer-блоки для VPS</h2>
+      <textarea id="allPeers" readonly rows="18"></textarea>
+      <form method="dialog"><button>Закрыть</button></form>
+    </dialog>
+
+    <script src="/app.js?v=20260610-lan"></script>
+  </body>
+</html>
